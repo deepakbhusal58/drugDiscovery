@@ -1,0 +1,87 @@
+# # doker version greater than 19 use 3.8
+# version: '3.8'
+
+# services:
+#   mysql:
+#     build:
+#       context: ./ubuntu18.04_mysql_server
+#       dockerfile: Dockerfile
+#     container_name: mysql
+#     environment:
+#       MYSQL_ROOT_PASSWORD: root
+#       MYSQL_DATABASE: db_mlflow
+#       MYSQL_USER: mlflow_user
+#       MYSQL_PASSWORD: mlflow
+#     ports:
+#       - "3306:3306"
+#     volumes:
+#       - mysql_data:/var/lib/mysql
+
+#   mlflow:
+#     # build:
+#     #   context: ./mlflow_server
+#     #   dockerfile: Dockerfile
+#     image: mlflow:latest
+#     container_name: mlflow
+#     environment:
+#       MLFLOW_TRACKING_URI=https://localhost:5000
+#     ports:
+#       - "5000:5000"
+#     depends_on:
+#       - mysql
+#     # command: mlflow server --backend-store-uri mysql
+#     volumes:
+#       - mlruns:/mlruns
+#     command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri mysql://mlflow_user:mlflow@localhost/db_mlflow --default-artifact-root /mlruns
+
+  
+#   model: 
+#     build: 
+#       context: ./drug_molecule_gen
+#       dockerfile: Dockerfile
+#     container_name: drug_discovery
+#     environment:
+#       PYTHONPATH: ${PYTHONPATH}:/drug_molecule_gen
+#     volumes:
+#       -mlruns:/mlruns
+#     depends_on:
+#       - mlflow
+
+
+version: '3.8'
+
+services:
+  mysql:
+    build:
+      context: ./app_dockerfiles/ubuntu18.04_mysql_server
+      dockerfile: Dockerfile
+    container_name: mysql_container
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./app_data/mysql_db:/var/lib/mysql/db_mlflow
+    restart: always
+
+  mlflow:
+    build:
+      context: ./app_dockerfiles/ubuntu22.04_mlflow_server
+      dockerfile: Dockerfile
+    container_name: mlflow_container
+    ports:
+      - "5000:5000"
+    expose: 
+      - "5000"
+    depends_on:
+      - mysql
+    volumes:
+      - ./app_data/mlruns:/var/lib/mlflow/mlruns
+
+  model:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: drug_discovery
+    volumes:
+      - ./app_data:/app_data
+    depends_on:
+      - mlflow
